@@ -10,8 +10,8 @@
 # Configuration:
 #   HUBOT_HEROKU_KEEPALIVE_URL or HEROKU_URL: required
 #   HUBOT_HEROKU_KEEPALIVE_INTERVAL: optional, defaults to 5 minutes
-#   HUBOT_HEROKU_WAKEUP_TIME: optional, defaults to 6:00 (6 AM).
-#   HUBOT_HEROKU_SLEEP_TIME: optional, defaults to 22:00 (10 PM)
+#   HUBOT_HEROKU_WAKEUP_TIME: optional
+#   HUBOT_HEROKU_SLEEP_TIME: optional
 #
 #   heroku config:add TZ="America/New_York"
 #
@@ -23,11 +23,12 @@
 #   Josh Nichols <technicalpickles@github.com>
 
 module.exports = (robot) ->
-  wakeUpTime = (process.env.HUBOT_HEROKU_WAKEUP_TIME or '6:00').split(':').map (i) -> parseInt i, 10
-  sleepTime =  (process.env.HUBOT_HEROKU_SLEEP_TIME or '22:00').split(':').map (i) -> parseInt i, 10
+  if process.env.HUBOT_HEROKU_WAKEUP_TIME && process.env.HUBOT_HEROKU_SLEEP_TIME
+    wakeUpTime = process.env.HUBOT_HEROKU_WAKEUP_TIME.split(':').map (i) -> parseInt i, 10
+    sleepTime =  process.env.HUBOT_HEROKU_SLEEP_TIME.split(':').map (i) -> parseInt i, 10
 
-  wakeUpOffset = (60 * wakeUpTime[0] + wakeUpTime[1]) % (60 * 24)
-  awakeMinutes = (60 * (sleepTime[0] + 24) + sleepTime[1] - wakeUpOffset) % (60 * 24)
+    wakeUpOffset = (60 * wakeUpTime[0] + wakeUpTime[1]) % (60 * 24)
+    awakeMinutes = (60 * (sleepTime[0] + 24) + sleepTime[1] - wakeUpOffset) % (60 * 24)
 
   keepaliveUrl = process.env.HUBOT_HEROKU_KEEPALIVE_URL or process.env.HEROKU_URL
   if keepaliveUrl and not keepaliveUrl.match(/\/$/)
@@ -54,7 +55,7 @@ module.exports = (robot) ->
       now = new Date()
       elapsedMinutes = (60 * (now.getHours() + 24) + now.getMinutes() - wakeUpOffset) % (60 * 24)
 
-      if elapsedMinutes < awakeMinutes
+      if !awakeMinutes? || elapsedMinutes < awakeMinutes
         client = robot.http("#{keepaliveUrl}heroku/keepalive")
         if process.env.EXPRESS_USER && process.env.EXPRESS_PASSWORD
           client.auth(process.env.EXPRESS_USER, process.env.EXPRESS_PASSWORD)
